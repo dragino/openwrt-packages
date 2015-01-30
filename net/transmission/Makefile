@@ -12,7 +12,7 @@ PKG_VERSION:=2.84
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=http://download-origin.transmissionbt.com/files/ http://mirrors.m0k.org/transmission/files
+PKG_SOURCE_URL:=http://download-origin.transmissionbt.com/files/ http://mirrors.m0k.org/transmission/files http://transmission.cachefly.net/
 PKG_MD5SUM:=411aec1c418c14f6765710d89743ae42
 
 PKG_FIXUP:=autoreconf
