@@ -9,14 +9,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=mosquitto
-PKG_VERSION:=1.4.2
-PKG_RELEASE:=2
+PKG_VERSION:=1.4.7
+PKG_RELEASE:=1
 PKG_LICENSE:=BSD-3-Clause
 PKG_LICENSE_FILES:=LICENSE.txt
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://mosquitto.org/files/source/
-PKG_MD5SUM:=2c3b19686c04849ed4b183c63149bfe1
+PKG_MD5SUM:=4cb978502312bff2dcdaab6a433b1bf2
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
@@ -145,7 +145,7 @@ endef
 
 Package/$(PKG_NAME)-nossl/conffiles = $(Package/$(PKG_NAME)/conffiles)
 
-define Package/$(PKG_NAME)/install
+define Package/mosquitto/install/default
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/mosquitto $(1)/usr/sbin/mosquitto
 	$(INSTALL_DIR) $(1)/etc/mosquitto
@@ -155,8 +155,18 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) ./files/mosquitto.uci.convert $(1)/usr/bin
 endef
-Package/$(PKG_NAME)-nossl/install = $(Package/$(PKG_NAME)/install)
 
+define Package/mosquitto-nossl/install
+	$(call Package/mosquitto/install/default,$(1))
+endef
+
+define Package/mosquitto/install
+	$(call Package/mosquitto/install/default,$(1))
+ifeq ($(CONFIG_MOSQUITTO_PASSWD),y)
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/mosquitto_passwd $(1)/usr/bin
+endif
+endef
 
 define Package/mosquitto-client/install
 	$(INSTALL_DIR) $(1)/usr/bin
@@ -185,7 +195,7 @@ Package/libmosquitto-nossl/install = $(Package/libmosquitto/install)
 # Applies to all...
 MAKE_FLAGS += WITH_DOCS=no
 ifeq ($(BUILD_VARIANT),nossl)
-        MAKE_FLAGS += WITH_TLS=no WITH_WEBSOCKETS=no
+	MAKE_FLAGS += WITH_TLS=no WITH_WEBSOCKETS=no
 else
 	MAKE_FLAGS += WITH_WEBSOCKETS=$(if $(CONFIG_MOSQUITTO_LWS),"yes","no")
 endif

@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=madplay
 PKG_VERSION:=0.15.2b
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=@SF/mad \
@@ -19,16 +19,19 @@ PKG_LICENSE:=GPL-2.0+
 PKG_LICENSE_FILES:=COPYING
 PKG_MAINTAINER:=Simon Peter <probono@puredarwin.org>
 
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
+
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/madplay
+define Package/madplay/default
   SECTION:=sound
   CATEGORY:=Sound
-  DEPENDS:=+libid3tag +libmad
-  TITLE:=MPEG audio player in fixed point
+  DEPENDS:=+libid3tag +libmad $(2)
+  TITLE:=MPEG audio player in fixed point - $(1)
+  VARIANT:=$(1)
   URL:=http://sourceforge.net/projects/mad
 endef
 
@@ -39,6 +42,9 @@ define Package/madplay/description
 	full support for ID3 tags.
 endef
 
+Package/madplay-alsa=$(call Package/madplay/default,alsa,+alsa-lib)
+Package/madplay=$(call Package/madplay/default,oss)
+
 define Build/Configure
 	$(call Build/Configure/Default, \
 		--enable-shared \
@@ -48,16 +54,32 @@ define Build/Configure
 		--disable-experimental \
 		--without-libiconv-prefix \
 		--without-libintl-prefix \
-		--without-alsa \
 		--without-esd \
 		, \
 		LIBS="-lz" \
 	)
 endef
 
+ifeq ($(BUILD_VARIANT),alsa)
+	CONFIGURE_ARGS += \
+		--without-oss \
+		--with-alsa
+endif
+
+ifeq ($(BUILD_VARIANT),oss)
+	CONFIGURE_ARGS += \
+		--without-alsa
+endif
+
 define Package/madplay/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/madplay $(1)/usr/bin/
 endef
 
+define Package/madplay-alsa/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/madplay $(1)/usr/bin/
+endef
+
+$(eval $(call BuildPackage,madplay-alsa))
 $(eval $(call BuildPackage,madplay))

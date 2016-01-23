@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2008-2014 OpenWrt.org
+# Copyright (C) 2008-2015 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,14 +8,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=freeradius2
-PKG_VERSION:=2.2.7
-PKG_RELEASE:=1
+PKG_VERSION:=2.2.8
+PKG_RELEASE:=2
 
 PKG_SOURCE:=freeradius-server-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=\
 	ftp://ftp.freeradius.org/pub/freeradius/ \
 	ftp://ftp.freeradius.org/pub/freeradius/old/
-PKG_MD5SUM:=b84b9ffa1ac9b20b2643e5a08ac483a1
+PKG_MD5SUM:=0adc2454392ab8a43664dea416022e28
 PKG_MAINTAINER:=Daniel Golle <daniel@makrotopia.org>
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYRIGHT LICENSE
@@ -350,6 +350,7 @@ CONFIGURE_ARGS+= \
 	$(if $(CONFIG_FREERADIUS_OPENSSL),--with,--without)-openssl \
 	$(if $(CONFIG_FREERADIUS_OPENSSL),--with-openssl-includes="$(STAGING_DIR)/usr/include",) \
 	$(if $(CONFIG_FREERADIUS_OPENSSL),--with-openssl-libraries="$(STAGING_DIR)/usr/lib",) \
+	$(if $(CONFIG_FREERADIUS_OPENSSL),--disable-openssl-version-check,) \
 	--with-system-libtool \
 	--with-system-libltdl \
 	--enable-strict-dependencies \
