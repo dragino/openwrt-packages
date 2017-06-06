@@ -1,0 +1,38 @@
+--- a/linuxgpio.c	2016-02-16 04:16:32.000000000 +0800
++++ b/linuxgpio.c	2017-06-06 08:51:50.116998962 +0800
+@@ -66,7 +66,7 @@
+     return fd;
+   }
+ 
+-  len = snprintf(buf, sizeof(buf), "%ud", gpio);
++  len = snprintf(buf, sizeof(buf), "%d", gpio);
+   r = write(fd, buf, len);
+   close(fd);
+ 
+@@ -84,7 +84,7 @@
+     return fd;
+   }
+ 
+-  len = snprintf(buf, sizeof(buf), "%ud", gpio);
++  len = snprintf(buf, sizeof(buf), "%d", gpio);
+   r = write(fd, buf, len);
+   close(fd);
+ 
+@@ -95,7 +95,7 @@
+ {
+   char filepath[60];
+ 
+-  snprintf(filepath, sizeof(filepath), "/sys/class/gpio/gpio%ud/value", gpio);
++  snprintf(filepath, sizeof(filepath), "/sys/class/gpio/gpio%d/value", gpio);
+   return (open(filepath, O_RDWR));
+ }
+ 
+@@ -104,7 +104,7 @@
+   int fd, r;
+   char buf[60];
+ 
+-  snprintf(buf, sizeof(buf), "/sys/class/gpio/gpio%ud/direction", gpio);
++  snprintf(buf, sizeof(buf), "/sys/class/gpio/gpio%d/direction", gpio);
+ 
+   fd = open(buf, O_WRONLY);
+   if (fd < 0) {
