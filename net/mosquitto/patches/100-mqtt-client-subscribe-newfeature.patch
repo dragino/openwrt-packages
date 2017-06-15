@@ -1,0 +1,163 @@
+diff -uNr a/client/client_shared.c b/client/client_shared.c
+--- a/client/client_shared.c	2017-06-14 17:13:01.251912708 +0800
++++ b/client/client_shared.c	2017-06-15 14:53:33.365848763 +0800
+@@ -59,6 +59,8 @@
+ 	free(cfg->password);
+ 	free(cfg->will_topic);
+ 	free(cfg->will_payload);
++	free(cfg->execute);
++	free(cfg->output);
+ #ifdef WITH_TLS
+ 	free(cfg->cafile);
+ 	free(cfg->capath);
+@@ -641,6 +643,22 @@
+ 				goto unknown_option;
+ 			}
+ 			cfg->verbose = 1;
++		}else if(!strcmp(argv[i], "-x") || !strcmp(argv[i], "--exe")){
++			if(i==argc-1){
++				fprintf(stderr, "Error: --execute argument given but no command specified.\n\n");
++				return 1;
++			}else{
++				cfg->execute = strdup(argv[i+1]);
++			}
++			i++;
++		}else if(!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")){
++			if(i==argc-1){
++				fprintf(stderr, "Error: --output argument given but no filename specified.\n\n");
++				return 1;
++			}else{
++				cfg->output = strdup(argv[i+1]);
++			}
++			i++;
+ 		}else{
+ 			goto unknown_option;
+ 		}
+diff -uNr a/client/client_shared.h b/client/client_shared.h
+--- a/client/client_shared.h	2017-06-14 17:13:01.248912708 +0800
++++ b/client/client_shared.h	2017-06-15 14:53:40.806848460 +0800
+@@ -80,6 +80,8 @@
+ 	bool verbose; /* sub */
+ 	bool eol; /* sub */
+ 	int msg_count; /* sub */
++        char *execute;  /* execute script */
++        char *output;  /* execute script */
+ #ifdef WITH_SOCKS
+ 	char *socks5_host;
+ 	int socks5_port;
+diff -uNr a/client/sub_client.c b/client/sub_client.c
+--- a/client/sub_client.c	2017-06-14 17:13:01.252912707 +0800
++++ b/client/sub_client.c	2017-06-15 14:53:35.061848694 +0800
+@@ -38,12 +38,17 @@
+ 	struct mosq_config *cfg;
+ 	int i;
+ 	bool res;
++        FILE *fp = NULL;
+ 
+ 	if(process_messages == false) return;
+ 
+ 	assert(obj);
+ 	cfg = (struct mosq_config *)obj;
+ 
++        if(cfg->output) 
++            if((fp = fopen(cfg->output, "a+")) == NULL)
++	        fprintf(stderr, "Open output file error\n");
++
+ 	if(message->retain && cfg->no_retain) return;
+ 	if(cfg->filter_outs){
+ 		for(i=0; i<cfg->filter_out_count; i++){
+@@ -55,7 +60,24 @@
+ 	if(cfg->verbose){
+ 		if(message->payloadlen){
+ 			printf("%s ", message->topic);
+-			fwrite(message->payload, 1, message->payloadlen, stdout);
++                        if(!fp)
++			    fwrite(message->payload, 1, message->payloadlen, stdout);
++                        else {
++                            fprintf(fp, "%ld:\n", time(NULL));
++			    fwrite(message->payload, 1, message->payloadlen, fp);
++                            fwrite("\r\n", 1, 2, fp);
++                        }
++
++                        if(cfg->execute){
++                            pid_t pid;
++                            if((pid = fork()) < 0){
++	                        fprintf(stderr, "execute command error\n");
++                            }else if(pid == 0) {
++                                execl("/bin/sh", "sh", "-c", cfg->execute, (char *)0);
++                                _exit(127);  /*execl error */
++                            }
++                        }
++
+ 			if(cfg->eol){
+ 				printf("\n");
+ 			}
+@@ -64,16 +86,39 @@
+ 				printf("%s (null)\n", message->topic);
+ 			}
+ 		}
+-		fflush(stdout);
+ 	}else{
+ 		if(message->payloadlen){
+-			fwrite(message->payload, 1, message->payloadlen, stdout);
++                        if(!fp)
++			    fwrite(message->payload, 1, message->payloadlen, stdout);
++                        else {
++                            fprintf(fp, "%ld:\n", time(NULL));
++			    fwrite(message->payload, 1, message->payloadlen, fp);
++                            fwrite("\n", 1, 2, fp);
++                        }
++
++                        if(cfg->execute){
++                            pid_t pid;
++                            if((pid = fork()) < 0){
++	                        fprintf(stderr, "execute command error\n");
++                            }else if(pid == 0) {
++                                execl("/bin/sh", "sh", "-c", cfg->execute, (char *)0);
++                                _exit(127);  /*execl error */
++                            }
++                        }
++
+ 			if(cfg->eol){
+ 				printf("\n");
+ 			}
+-			fflush(stdout);
+ 		}
+ 	}
++
++        if(fp){ 
++            fflush(fp);
++            fclose(fp);
++        }
++
++        fflush(stdout);
++
+ 	if(cfg->msg_count>0){
+ 		msg_count++;
+ 		if(cfg->msg_count == msg_count){
+@@ -81,6 +126,7 @@
+ 			mosquitto_disconnect(mosq);
+ 		}
+ 	}
++        
+ }
+ 
+ void my_connect_callback(struct mosquitto *mosq, void *obj, int result)
+@@ -139,6 +185,8 @@
+ 	printf("                     [-i id] [-I id_prefix]\n");
+ 	printf("                     [-d] [-N] [--quiet] [-v]\n");
+ 	printf("                     [-u username [-P password]]\n");
++	printf("                     [-o filename\n");
++	printf("                     [-x command\n");
+ 	printf("                     [--will-topic [--will-payload payload] [--will-qos qos] [--will-retain]]\n");
+ #ifdef WITH_TLS
+ 	printf("                     [{--cafile file | --capath dir} [--cert file] [--key file]\n");
+@@ -173,6 +221,8 @@
+ 	printf(" -T : topic string to filter out of results. May be repeated.\n");
+ 	printf(" -u : provide a username (requires MQTT 3.1 broker)\n");
+ 	printf(" -v : print published messages verbosely.\n");
++	printf(" -o : payload message will be output to file.\n");
++	printf(" -x : execute a system command on the shell.\n");
+ 	printf(" -V : specify the version of the MQTT protocol to use when connecting.\n");
+ 	printf("      Can be mqttv31 or mqttv311. Defaults to mqttv31.\n");
+ 	printf(" --help : display this message.\n");
